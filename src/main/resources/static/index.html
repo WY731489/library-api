@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>图书借阅管理系统 - 演示</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft YaHei", sans-serif; background: #f5f6fa; padding: 20px; }
+.container { max-width: 1000px; margin: 0 auto; }
+h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+.card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+h2 { font-size: 16px; color: #34495e; margin-bottom: 12px; border-left: 4px solid #3498db; padding-left: 10px; }
+h3 { font-size: 14px; color: #7f8c8d; margin: 8px 0; }
+input, select { padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 14px; margin: 4px; }
+button { padding: 8px 18px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: #fff; transition: 0.2s; }
+button:hover { opacity: 0.85; }
+.btn-blue { background: #3498db; }
+.btn-green { background: #27ae60; }
+.btn-orange { background: #e67e22; }
+.btn-red { background: #e74c3c; }
+.btn-gray { background: #95a5a6; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+th { background: #f8f9fa; color: #555; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.badge-0 { background: #fadbd8; color: #c0392b; }
+.badge-1 { background: #d5f5e3; color: #27ae60; }
+.badge-admin { background: #d6eaf8; color: #2980b9; }
+.badge-reader { background: #fef9e7; color: #f39c12; }
+#status { padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center; font-size: 14px; }
+.status-login { background: #d5f5e3; color: #1e8449; }
+.status-logout { background: #fadbd8; color: #c0392b; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* 登录页专用样式 */
+.login-wrap { max-width: 420px; margin: 60px auto; }
+.login-card { text-align: center; padding: 40px 30px; }
+.login-card input { width: 100%; margin: 6px 0; padding: 12px; font-size: 15px; }
+.login-card .btn-blue, .login-card .btn-orange { width: 100%; margin-top: 10px; padding: 12px; font-size: 15px; }
+.login-hint { font-size: 12px; color: #aaa; margin-top: 16px; }
+/* 未登录遮罩 */
+.locked-mask { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+.locked-mask .icon { font-size: 40px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📚 图书借阅管理系统</h1>
+<div id="status" class="status-logout">⚠️ 未登录</div>
+
+<!-- ===== 未登录：只显示登录页 ===== -->
+<div id="loginView">
+    <div class="login-wrap">
+        <div class="card login-card">
+            <h2 style="border:none;padding:0;margin-bottom:20px;">🔐 用户登录</h2>
+            <input id="loginUser" placeholder="账号" value="admin">
+            <input id="loginPwd" placeholder="密码" type="password" value="123456">
+            <button class="btn-blue" onclick="login()">登 录</button>
+            <button class="btn-orange" onclick="register()">注册新读者</button>
+            <div class="login-hint">
+                💡 演示账号 &nbsp;|&nbsp; admin / 123456（管理员）<br>
+                reader / 123456（读者）
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 已登录：显示业务区域 ===== -->
+<div id="mainView" style="display:none;">
+
+    <!-- 用户信息 + 退出 -->
+    <div class="card">
+        <div class="row" style="justify-content:space-between;">
+            <div id="userInfo" style="font-size:14px;"></div>
+            <button class="btn-gray" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+
+    <!-- 图书列表 -->
+    <div class="card">
+        <h2>📖 图书管理</h2>
+        <div class="row" style="margin-bottom:10px;">
+            <input id="searchKeyword" placeholder="输入书名或作者搜索..." style="width:200px;" onkeydown="if(event.key==='Enter') searchBooks()">
+            <select id="filterCategoryId" onchange="loadBooks()" style="width:140px;">
+                <option value="">全部分类</option>
+            </select>
+            <button class="btn-blue" onclick="searchBooks()">🔍 搜索</button>
+            <button class="btn-gray" onclick="loadBooks()">🔄 全部</button>
+        </div>
+        <div id="adminAddBook" class="row" style="margin-bottom:10px;">
+            <h3>新增图书（仅管理员）</h3>
+            <input id="newBookName" placeholder="书名" style="width:120px;">
+            <input id="newBookAuthor" placeholder="作者" style="width:100px;">
+            <select id="newBookCategoryId" style="width:110px;"></select>
+            <input id="newBookStock" placeholder="库存" type="number" value="10" style="width:70px;">
+            <input id="newBookPublishTime" placeholder="出版日期" type="date" style="width:140px;">
+            <button class="btn-green" onclick="addBook()">➕ 新增</button>
+        </div>
+        <div id="readerAddBookLock" style="display:none;" class="locked-mask">
+            <div class="icon">🔒</div>
+            您是读者角色，无权限新增图书
+        </div>
+        <table id="bookTable">
+            <thead><tr><th>ID</th><th>书名</th><th>作者</th><th>分类</th><th>库存</th><th>出版</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <!-- 分页 -->
+        <div class="row" style="justify-content:center;margin-top:14px;gap:6px;">
+            <button class="btn-gray" onclick="prevPage()">⬅ 上一页</button>
+            <span id="pageInfo" style="padding:8px 12px;background:#f0f0f0;border-radius:4px;font-size:13px;">1 / 1</span>
+            <button class="btn-gray" onclick="nextPage()">➡ 下一页</button>
+            <span style="font-size:12px;color:#888;margin-left:10px;">共 <span id="totalRecords">0</span> 条</span>
+        </div>
+    </div>
+
+    <!-- 图书分类管理 -->
+    <div class="card">
+        <h2>🏷️ 图书分类</h2>
+        <div id="adminCategoryAdd" class="row" style="margin-bottom:10px;">
+            <h3>新增分类（管理员）</h3>
+            <input id="newCategoryName" placeholder="分类名称" style="width:160px;">
+            <button class="btn-green" onclick="addCategory()">➕ 新增</button>
+        </div>
+        <div id="readerCategoryAddLock" style="display:none;" class="locked-mask">
+            <div class="icon">🔒</div>
+            您是读者角色，无权限管理分类
+        </div>
+        <table id="categoryTable">
+            <thead><tr><th>ID</th><th>分类名称</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- 借阅 -->
+    <div class="card">
+        <h2>📝 借阅管理</h2>
+        <div class="row" style="margin-bottom:10px;">
+            <h3>借阅图书</h3>
+            <input id="borrowBookId" placeholder="图书ID" type="number" style="width:100px;">
+            <button class="btn-blue" onclick="borrowBook()">📖 借阅</button>
+            <button class="btn-blue" onclick="loadRecords()">🔄 刷新借阅记录</button>
+        </div>
+        <table id="recordTable">
+            <thead><tr><th>ID</th><th>图书ID</th><th>用户ID</th><th>借出时间</th><th>应还时间</th><th>归还时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8081';
+let token = localStorage.getItem('token') || '';
+
+function setStatus() {
+    const el = document.getElementById('status');
+    const loginView = document.getElementById('loginView');
+    const mainView = document.getElementById('mainView');
+    if (token) {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        el.className = 'status-login';
+        el.innerHTML = '✅ 已登录 - ' + (u.username || '') + ' (' + (u.role === 1 ? '管理员' : '读者') + ')';
+        loginView.style.display = 'none';
+        mainView.style.display = 'block';
+        // 设置用户信息
+        document.getElementById('userInfo').innerHTML =
+            '👤 ' + (u.realName || '') + '（ID:' + u.id + '）' +
+            ' <span class="badge ' + (u.role === 1 ? 'badge-admin' : 'badge-reader') + '">' +
+            (u.role === 1 ? '管理员' : '读者') + '</span>';
+        // 读者隐藏管理员功能
+        const isAdmin = u.role === 1;
+        document.getElementById('adminAddBook').style.display = isAdmin ? 'flex' : 'none';
+        document.getElementById('readerAddBookLock').style.display = isAdmin ? 'none' : 'block';
+        document.getElementById('adminCategoryAdd').style.display = isAdmin ? 'flex' : 'none';
+        document.getElementById('readerCategoryAddLock').style.display = isAdmin ? 'none' : 'block';
+    } else {
+        el.className = 'status-logout';
+        el.innerHTML = '⚠️ 未登录';
+        loginView.style.display = 'block';
+        mainView.style.display = 'none';
+    }
+}
+
+async function api(path, method, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (token) opts.headers['Authorization'] = token;
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API + path, opts);
+    return res.json();
+}
+
+function showError(msg) { alert('❌ ' + msg); }
+
+async function login() {
+    const username = document.getElementById('loginUser').value.trim();
+    const password = document.getElementById('loginPwd').value.trim();
+    if (!username || !password) { showError('账号密码不能为空'); return; }
+    const data = await api('/api/auth/login', 'POST', { username, password });
+    if (data.code === 200 && data.data) {
+        token = data.data.token;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+        setStatus();
+        await loadCategories();
+        loadBooks();
+        loadRecords();
+        alert('✅ 登录成功');
+    } else {
+        showError(data.msg || '登录失败');
+    }
+}
+
+async function register() {
+    const username = prompt('请输入新账号:');
+    if (!username) return;
+    const password = prompt('请输入密码（默认123456）:') || '123456';
+    const realName = prompt('请输入姓名:') || '';
+    const data = await api('/api/auth/register', 'POST', { username, password, realName, phone: '13800000000' });
+    if (data.code === 200) {
+        alert('✅ 注册成功，请登录');
+        document.getElementById('loginUser').value = username;
+    } else {
+        showError(data.msg || '注册失败');
+    }
+}
+
+function logout() {
+    token = '';
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setStatus();
+    document.querySelector('#bookTable tbody').innerHTML = '';
+    document.querySelector('#recordTable tbody').innerHTML = '';
+    document.querySelector('#categoryTable tbody').innerHTML = '';
+}
+
+/* ============ 图书列表（分页 + 关键词 + 分类筛选） ============ */
+let currentPage = 1;
+const PAGE_SIZE = 5;
+let categoryMap = {}; // id -> categoryName
+
+async function loadCategories() {
+    const data = await api('/api/category/list', 'GET');
+    if (data.code !== 200) { return; }
+    categoryMap = {};
+    const filterSel = document.getElementById('filterCategoryId');
+    const newSel = document.getElementById('newBookCategoryId');
+    filterSel.innerHTML = '<option value="">全部分类</option>';
+    newSel.innerHTML = '';
+    data.data.forEach(c => {
+        categoryMap[c.id] = c.categoryName;
+        filterSel.innerHTML += `<option value="${c.id}">${c.categoryName}</option>`;
+        newSel.innerHTML += `<option value="${c.id}">${c.categoryName}</option>`;
+    });
+    // 同步渲染分类管理表
+    renderCategoryTable(data.data);
+}
+
+async function loadBooks() {
+    currentPage = 1;
+    await fetchPage();
+}
+
+async function searchBooks() {
+    currentPage = 1;
+    await fetchPage();
+}
+
+async function fetchPage() {
+    const kw = document.getElementById('searchKeyword').value.trim();
+    const cat = document.getElementById('filterCategoryId').value;
+    let url = `/api/book/page?pageNum=${currentPage}&pageSize=${PAGE_SIZE}`;
+    if (kw) url += `&keyword=${encodeURIComponent(kw)}`;
+    if (cat) url += `&categoryId=${cat}`;
+    const data = await api(url, 'GET');
+    if (data.code !== 200) { showError(data.msg); return; }
+    renderBooks(data.data);
+}
+
+function renderBooks(page) {
+    const tbody = document.querySelector('#bookTable tbody');
+    tbody.innerHTML = '';
+    const records = page.records || [];
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">暂无数据</td></tr>';
+    } else {
+        records.forEach(b => {
+            const catName = categoryMap[b.categoryId] || '-';
+            tbody.innerHTML += `<tr>
+                <td>${b.id}</td>
+                <td>${b.bookName}</td>
+                <td>${b.author || '-'}</td>
+                <td>${catName}</td>
+                <td>${b.stock}</td>
+                <td>${b.publishTime || '-'}</td>
+                <td><button class="btn-blue" onclick="quickBorrow(${b.id})">📖 借阅</button></td>
+            </tr>`;
+        });
+    }
+    // 分页信息
+    const total = page.total || 0;
+    const pages = page.pages || 1;
+    const current = page.current || 1;
+    currentPage = current;
+    document.getElementById('pageInfo').innerText = `${current} / ${pages}`;
+    document.getElementById('totalRecords').innerText = total;
+}
+
+function prevPage() {
+    if (currentPage <= 1) { alert('已经是第一页'); return; }
+    currentPage--;
+    fetchPage();
+}
+
+function nextPage() {
+    currentPage++;
+    fetchPage();
+}
+
+async function addBook() {
+    const name = document.getElementById('newBookName').value.trim();
+    const author = document.getElementById('newBookAuthor').value.trim();
+    const categoryId = document.getElementById('newBookCategoryId').value || null;
+    const stock = parseInt(document.getElementById('newBookStock').value);
+    const publishTime = document.getElementById('newBookPublishTime').value || null;
+    if (!name) { showError('书名不能为空'); return; }
+    const body = { bookName: name, author, stock };
+    if (categoryId) body.categoryId = parseInt(categoryId);
+    if (publishTime) body.publishTime = publishTime;
+    const data = await api('/api/book/add', 'POST', body);
+    if (data.code === 200) {
+        alert('✅ 新增成功');
+        document.getElementById('newBookName').value = '';
+        document.getElementById('newBookAuthor').value = '';
+        loadBooks();
+    } else {
+        showError(data.msg);
+    }
+}
+
+/* ============ 图书分类管理 ============ */
+function renderCategoryTable(list) {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const isAdmin = u.role === 1;
+    const tbody = document.querySelector('#categoryTable tbody');
+    tbody.innerHTML = '';
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#aaa;padding:20px;">暂无分类</td></tr>';
+        return;
+    }
+    list.forEach(c => {
+        const ops = isAdmin
+            ? `<button class="btn-red" onclick="deleteCategory(${c.id})">🗑 删除</button>`
+            : '-';
+        tbody.innerHTML += `<tr>
+            <td>${c.id}</td>
+            <td>${c.categoryName}</td>
+            <td>${ops}</td>
+        </tr>`;
+    });
+}
+
+async function addCategory() {
+    const name = document.getElementById('newCategoryName').value.trim();
+    if (!name) { showError('分类名不能为空'); return; }
+    const data = await api('/api/category/add', 'POST', { categoryName: name });
+    if (data.code === 200) {
+        alert('✅ 新增分类成功');
+        document.getElementById('newCategoryName').value = '';
+        await loadCategories();
+    } else {
+        showError(data.msg);
+    }
+}
+
+async function deleteCategory(id) {
+    if (!confirm('确认删除该分类？')) return;
+    const data = await api('/api/category/delete/' + id, 'DELETE');
+    if (data.code === 200) {
+        alert('✅ 删除成功');
+        await loadCategories();
+        loadBooks();
+    } else {
+        showError(data.msg);
+    }
+}
+
+async function loadCategoryList() {
+    const data = await api('/api/category/list', 'GET');
+    if (data.code === 200) renderCategoryTable(data.data);
+}
+
+/* ============ 借阅管理 ============ */
+async function borrowBook() {
+    const bookId = parseInt(document.getElementById('borrowBookId').value);
+    if (!bookId) { showError('请输入图书ID'); return; }
+    const data = await api('/api/borrow/' + bookId, 'POST');
+    if (data.code === 200) {
+        alert('✅ 借阅成功');
+        document.getElementById('borrowBookId').value = '';
+        loadBooks();
+        loadRecords();
+    } else {
+        showError(data.msg);
+    }
+}
+
+function quickBorrow(bookId) {
+    document.getElementById('borrowBookId').value = bookId;
+    borrowBook();
+}
+
+async function loadRecords() {
+    const data = await api('/api/borrow/list', 'GET');
+    const tbody = document.querySelector('#recordTable tbody');
+    tbody.innerHTML = '';
+    if (data.code !== 200) { showError(data.msg); return; }
+    data.data.forEach(r => {
+        tbody.innerHTML += `<tr>
+            <td>${r.id}</td><td>${r.bookId}</td><td>${r.userId}</td>
+            <td>${fmt(r.borrowTime)}</td><td>${fmt(r.shouldReturnTime)}</td><td>${fmt(r.returnTime)}</td>
+            <td><span class="badge ${r.status === 1 ? 'badge-1' : 'badge-0'}">${r.status === 1 ? '已归还' : '未归还'}</span></td>
+            <td>${r.status === 0 ? `<button class="btn-green" onclick="returnBook(${r.id})">📤 归还</button>` : '-'}</td>
+        </tr>`;
+    });
+}
+
+async function returnBook(id) {
+    if (!confirm('确认归还这条借阅记录？')) return;
+    const data = await api('/api/borrow/return/' + id, 'PUT');
+    if (data.code === 200) {
+        alert('✅ 归还成功');
+        loadBooks();
+        loadRecords();
+    } else {
+        showError(data.msg);
+    }
+}
+
+function fmt(t) { return t ? t.replace('T', ' ').substring(0, 16) : '-'; }
+
+// 页面加载：恢复登录状态
+setStatus();
+if (token) {
+    loadCategories().then(() => {
+        loadBooks();
+        loadRecords();
+    });
+}
+</script>
+</body>
+</html>

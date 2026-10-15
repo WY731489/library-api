@@ -1,0 +1,13 @@
+com\lb\library\controller\BookController.class
+com\lb\library\LibraryApplication.class
+com\lb\library\entity\Book.class
+com\lb\library\service\impl\BorrowRecordServiceImpl.class
+com\lb\library\common\Result.class
+com\lb\library\common\GlobalExceptionHandler.class
+com\lb\library\entity\BorrowRecord.class
+com\lb\library\mapper\BookMapper.class
+com\lb\library\service\BorrowRecordService.class
+com\lb\library\service\BookService.class
+com\lb\library\service\impl\BookServiceImpl.class
+com\lb\library\controller\BorrowController.class
+com\lb\library\mapper\BorrowRecordMapper.class

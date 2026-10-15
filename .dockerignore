@@ -1,0 +1,35 @@
+# 构建产物（镜像内会重新 mvn package）
+target/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志、临时文件
+*.log
+logs/
+tmp/
+
+# Git
+.git/
+.gitignore
+
+# Maven 仓库缓存
+.mvn/
+mvnw
+mvnw.cmd
+
+# 测试相关（构建时跳过测试）
+src/test/
+
+# 文档
+README*.md
+docs/
+
+# Docker 自身文件（避免递归嵌套）
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker/

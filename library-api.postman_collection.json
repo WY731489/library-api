@@ -1,0 +1,461 @@
+{
+	"info": {
+		"_postman_id": "b1a2c3d4-e5f6-7890-abcd-1234567890ab",
+		"name": "图书借阅管理系统-接口测试",
+		"description": "登录+注册+权限+图书+借阅 全流程测试脚本。\n\n【使用步骤】\n1. 先在 MySQL 执行两条 SQL（改密码字段+MD5密码）\n2. 确认项目已启动 http://localhost:8081\n3. 先点【认证】里的「登录-管理员admin」和「登录-读者reader」，token会自动保存\n4. 之后所有请求直接点 Send 即可，token自动携带",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081"
+		},
+		{
+			"key": "adminToken",
+			"value": ""
+		},
+		{
+			"key": "readerToken",
+			"value": ""
+		},
+		{
+			"key": "recordId",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "① 认证（无需token）",
+			"item": [
+				{
+					"name": "登录-管理员admin（自动保存token）",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.code === 200 && res.data && res.data.token) {",
+									"    pm.collectionVariables.set('adminToken', res.data.token);",
+									"    pm.test('管理员登录成功，token已自动保存', function () {",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"} else {",
+									"    pm.test('登录失败: ' + (res.msg || '未知错误') + '（检查是否已执行SQL修改密码）', function () {",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "登录-读者reader（自动保存token）",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.code === 200 && res.data && res.data.token) {",
+									"    pm.collectionVariables.set('readerToken', res.data.token);",
+									"    pm.test('读者登录成功，token已自动保存', function () {",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"} else {",
+									"    pm.test('登录失败: ' + (res.msg || '未知错误'), function () {",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"reader\",\n    \"password\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "注册新用户",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"123456\",\n    \"realName\": \"测试用户\",\n    \"phone\": \"13800000000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "② 图书",
+			"item": [
+				{
+					"name": "查询图书列表",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/book/list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"book",
+								"list"
+							]
+						}
+					}
+				},
+				{
+					"name": "新增图书-管理员（预期成功）",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookName\": \"Postman自动测试图书\",\n    \"author\": \"测试作者\",\n    \"stock\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/book/add",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"book",
+								"add"
+							]
+						}
+					}
+				},
+				{
+					"name": "新增图书-读者（预期403无权限）",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{readerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookName\": \"读者试图新增的书\",\n    \"author\": \"谁\",\n    \"stock\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/book/add",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"book",
+								"add"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "③ 借阅",
+			"item": [
+				{
+					"name": "借阅图书-读者借1号书",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{readerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/borrow/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"borrow",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "查询借阅记录-读者视角（自动提取recordId）",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.code === 200 && res.data && res.data.length > 0) {",
+									"    const pending = res.data.find(r => r.status === 0);",
+									"    if (pending) {",
+									"        pm.collectionVariables.set('recordId', pending.id);",
+									"        console.log('已自动提取未归还记录 recordId=' + pending.id);",
+									"    } else {",
+									"        console.log('没有未归还的记录了');",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{readerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/borrow/list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"borrow",
+								"list"
+							]
+						}
+					}
+				},
+				{
+					"name": "查询借阅记录-管理员视角（看全部）",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/borrow/list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"borrow",
+								"list"
+							]
+						}
+					}
+				},
+				{
+					"name": "归还图书（用自动提取的recordId）",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{readerToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/borrow/return/{{recordId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"borrow",
+								"return",
+								"{{recordId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "④ 未登录测试",
+			"item": [
+				{
+					"name": "未登录查图书（预期401未登录）",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/book/list",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"book",
+								"list"
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,54 @@
+# 一键启动图书借阅系统（MySQL + Spring Boot 应用）
+# 使用方法：
+#   1. 装 Docker Desktop（https://www.docker.com/products/docker-desktop）
+#   2. 在项目根目录执行：docker compose up --build
+# 3. 等待 1~2 分钟（首次构建需要下载依赖），访问 http://localhost:8081/
+
+services:
+  # ============= MySQL 数据库 =============
+  mysql:
+    image: mysql:8.0
+    container_name: library-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123456}
+      MYSQL_DATABASE: book_library
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"   # 宿主机 3307，避免和本地 MySQL 3306 冲突
+    volumes:
+      # 初始化脚本（首次启动时自动执行建表+灌数据）
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # 数据持久化（容器删了数据还在）
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-root123456}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  # ============= Spring Boot 应用 =============
+  app:
+    build: .
+    container_name: library-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy   # 等 MySQL 健康后再启动应用
+    environment:
+      DB_HOST: mysql                 # 用 service 名做主机名
+      DB_PORT: 3306
+      DB_NAME: book_library
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-root123456}
+      SERVER_PORT: 8081
+      SPRINGDOC_ENABLED: "true"
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8081:8081"
+
+volumes:
+  mysql-data:
+    driver: local

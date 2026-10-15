@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  datasource:
+    # ====== 数据库连接（支持环境变量注入，默认值给本地开发用） ======
+    # 本地开发：保持默认即可
+    # Docker 部署：通过环境变量覆盖（DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD）
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:book_library}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    # 驼峰命名映射: book_name -> bookName
+    map-underscore-to-camel-case: true
+    # 控制台打印 SQL 日志，方便调试
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      # 主键自增策略
+      id-type: auto
+
+# SpringDoc / Knife4j 文档（生产环境可通过环境变量关闭）
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:true}
